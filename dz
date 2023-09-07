@@ -1,0 +1,69 @@
+import sqlite3
+if __name__ == "__main__":
+    conn = sqlite3.connect('client.sqlite')
+    cursor = conn.cursor()
+    # 1) Добавление новых станков и установка их активности
+    new_endpoints = [("Сварочный аппарат №1", "true"), ("Пильный аппарат №2", "true"), ("Фрезер №3", "true")]
+    cursor.executemany("INSERT INTO endpoints (name, active) VALUES (?, ?)", new_endpoints)
+    conn.commit()
+    # 2) Копирование причин простоя со старых станков на новые
+    old_endpoints = ["Фрезерный станок", "Старый ЧПУ", "Сварка"]
+    for endpoint in old_endpoints:
+        cursor.execute("SELECT id FROM endpoints WHERE name = ?", (endpoint,))
+        old_endpoint_id = cursor.fetchone()
+        if old_endpoint_id is not None:
+            old_endpoint_id = old_endpoint_id[0]
+            cursor.execute("SELECT reason_name, reason_hierarchy FROM endpoint_reasons WHERE endpoint_id = ?",
+                           (old_endpoint_id,))
+            print(old_endpoint_id)
+            reasons = cursor.fetchall()
+            # new_endpoint_id = cursor.lastrowid
+            points = ["Сварочный аппарат №1", "Пильный аппарат №2", "Фрезер №3"]
+            for reason in reasons:
+                for oint in points:
+                    cursor.execute("SELECT id FROM endpoints WHERE name = ?", (oint,))
+                    endpoint_id = cursor.fetchone()
+                    print(endpoint_id)
+                    print(reason)
+                    if endpoint_id is not None:
+                        endpoint_id=endpoint_id[0]
+                        cursor.execute(
+                    "INSERT INTO endpoint_reasons (endpoint_id, reason_name, reason_hierarchy) VALUES (?, ?, ?)",
+                    (endpoint_id, reason[0], reason[1]))
+                print(reason)
+                # print(point_id, reason[0], reason[1])
+            conn.commit()
+    # 3) Определение группы "Цех №2" для новых станков
+    # cursor.execute("SELECT id FROM endpoint_groups WHERE name = 'Цех №2'")
+    # group_row = cursor.fetchone()
+
+    points = ["Сварочный аппарат №1", "Пильный аппарат №2", "Фрезер №3"]
+    for oint in points:
+        cursor.execute("SELECT id FROM endpoints WHERE name = ?", (oint,))
+        point_id = cursor.fetchone()
+        print(point_id)
+        if point_id is not None:
+            point_id = point_id[0]
+            cursor.execute("INSERT INTO endpoint_groups (endpoint_id, name) VALUES (?,?)", (point_id, 'Цех №2',))
+    conn.commit()
+    # if group_row is None:
+
+    group_id = cursor.lastrowid
+    # else:
+    #     group_id = group_row[0]
+    # new_endpoint_ids = [cursor.lastrowid - i for i in range(len(new_endpoints))]
+    # for endpoint_id in new_endpoint_ids:
+    #     cursor.execute("INSERT INTO endpoint_groups (endpoint_id, name) VALUES (?, ?)", (endpoint_id, group_id))
+    # 4) Добавление станков "Пильный станок" и "Старый ЧПУ" к новой группе
+    new_endpoints = ["Пильный станок", "Старый ЧПУ"]
+    new_group="Новая группа"
+    for endpoint in new_endpoints:
+        cursor.execute("SELECT id FROM endpoints WHERE name = ?", (endpoint,))
+        endpoint_id = cursor.fetchone()
+        if endpoint_id is not None:
+            endpoint_id = endpoint_id[0]
+            cursor.execute("INSERT INTO endpoint_groups (endpoint_id, name) VALUES (?, ?)", (endpoint_id, new_group))
+    conn.commit()
+
+    # Закрытие соединения с базой данных
+    conn.close()
